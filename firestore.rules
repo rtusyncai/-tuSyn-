@@ -1,0 +1,250 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ==========================================
+    // PHASE 3: PRIMITIVES & HARDENED HELPERS
+    // ==========================================
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null; }
+    
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email.matches('(?i).*(rtusync|folksveda).*@gmail\\.com') ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isDoctor() {
+      return isSignedIn() && 
+        exists(/databases/$(database)/documents/profiles/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.role == 'doctor';
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isVerified() {
+      return isSignedIn() && (request.auth.token.email_verified == true || isAdmin());
+    }
+
+    function isActive() {
+      let profilePath = /databases/$(database)/documents/profiles/$(request.auth.uid);
+      return isSignedIn() && (
+        !exists(profilePath) || 
+        get(profilePath).data.get('status', 'active') != 'deactivated'
+      );
+    }
+
+    // ==========================================
+    // 0. GLOBAL SAFETY NET
+    // ==========================================
+    match /{document=**} { allow read, write: if false; }
+
+    // Connectivity Test
+    match /test/connection {
+      allow read: if isSignedIn();
+    }
+
+    // ==========================================
+    // 1. MARKETPLACE & ENTITIES
+    // ==========================================
+    
+    match /marketplace_services/{serviceId} {
+      function isValidService(data) {
+        return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+               data.provider is string && data.provider.size() <= 100 &&
+               data.userId == request.auth.uid &&
+               data.type in ['Therapist', 'Retreat', 'Hospital'] &&
+               data.createdAt == request.time;
+      }
+      allow get, list: if true;
+      allow create: if isVerified() && isActive() && isValidService(incoming());
+      allow update: if isVerified() && isActive() && (isOwner(existing().userId) || isAdmin()) && 
+                    incoming().userId == existing().userId &&
+                    incoming().createdAt == existing().createdAt &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'provider', 'description', 'location', 'category', 'type', 'rating']);
+      allow delete: if isVerified() && isActive() && (isOwner(existing().userId) || isAdmin());
+    }
+
+    match /marketplace_produce/{produceId} {
+      function isValidProduce(data) {
+        return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+               data.description is string && data.description.size() <= 1000 &&
+               data.userId == request.auth.uid &&
+               data.price is number && data.price >= 0 &&
+               (data.get('image', null) == null || (data.image is string && data.image.size() < 1048576)) &&
+               data.createdAt == request.time;
+      }
+      allow get, list: if true;
+      allow create: if isVerified() && isActive() && isValidProduce(incoming());
+      allow update: if isVerified() && isActive() && (isOwner(existing().userId) || isAdmin()) && 
+                    incoming().userId == existing().userId &&
+                    incoming().createdAt == existing().createdAt &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'description', 'price', 'unit', 'category', 'organic', 'location', 'image']);
+      allow delete: if isVerified() && isActive() && (isOwner(existing().userId) || isAdmin());
+    }
+
+    match /marketplace/{productId} {
+      function isValidProduct(data) {
+        return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+               data.userId == request.auth.uid &&
+               data.price is number && data.price >= 0 &&
+               data.createdAt == request.time;
+      }
+      allow get, list: if true;
+      allow create: if isVerified() && isActive() && isValidProduct(incoming());
+      allow update: if isVerified() && isActive() && (isOwner(existing().userId) || isAdmin()) && 
+                    incoming().userId == existing().userId &&
+                    incoming().createdAt == existing().createdAt;
+      allow delete: if isVerified() && isActive() && (isOwner(existing().userId) || isAdmin());
+    }
+
+    match /marketplace_meals/{mealId} {
+      function isValidMeal(data) {
+        return data.name is string && data.name.size() <= 100 &&
+               data.userId == request.auth.uid &&
+               data.price is number && data.price >= 0 &&
+               data.createdAt == request.time;
+      }
+      allow get, list: if true;
+      allow create: if isVerified() && isActive() && isValidMeal(incoming());
+      allow update: if isVerified() && isActive() && (isOwner(existing().userId) || isAdmin()) && 
+                    incoming().userId == existing().userId &&
+                    incoming().createdAt == existing().createdAt &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'description', 'price', 'location', 'portions', 'isCompliant', 'ayurvedicProfile', 'ingredients', 'insight', 'prabhava', 'allergens', 'complianceNote']);
+      allow delete: if isVerified() && isActive() && (isOwner(existing().userId) || isAdmin());
+    }
+
+    // ==========================================
+    // 2. PROFILES
+    // ==========================================
+    match /profiles/{uid} {
+      function isValidProfile(data) {
+        return data.get('uid', uid) == uid && data.get('email', '') is string;
+      }
+      allow get: if isOwner(uid) || isAdmin() || isDoctor();
+      allow list: if isAdmin() || isDoctor();
+      allow create: if isOwner(uid) && isValidProfile(incoming()) && 
+                    incoming().get('role', 'user') == 'user' &&
+                    (incoming().get('createdAt', request.time) == request.time);
+      allow update: if isOwner(uid) && 
+                    incoming().get('uid', uid) == uid &&
+                    (incoming().get('createdAt', resource.data.createdAt) == resource.data.createdAt) &&
+                    (
+                      isAdmin() || 
+                      (
+                        !incoming().diff(existing()).affectedKeys().hasAny(['role', 'status']) &&
+                        (
+                          !incoming().diff(existing()).affectedKeys().hasAny(['email']) ||
+                          incoming().email == request.auth.token.email
+                        )
+                      )
+                    );
+      allow delete: if isAdmin();
+
+      match /journal/{id} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow create: if isOwner(uid) && incoming().uid == uid && incoming().createdAt == request.time;
+        allow update: if isOwner(uid) && incoming().uid == uid && incoming().createdAt == existing().createdAt;
+        allow delete: if isOwner(uid) || isAdmin();
+      }
+      match /ayurwear/{id} {
+        allow get, list: if true;
+        allow write: if isOwner(uid) || isAdmin();
+      }
+      match /meal_plan/{id} {
+        allow read, write: if isOwner(uid) || isAdmin();
+      }
+    }
+
+    // ==========================================
+    // 3. CLINICAL DATA
+    // ==========================================
+    match /prescriptions/{id} {
+      allow read: if isSignedIn() && (isOwner(existing().patientUid) || isOwner(existing().doctorId) || isAdmin());
+      allow create: if isVerified() && (isDoctor() || isAdmin());
+      allow update: if isAdmin() || (isDoctor() && isOwner(existing().doctorId));
+      allow delete: if isAdmin();
+    }
+
+    match /ayur_chats/{sessionId} {
+      allow get: if isSignedIn() && (isOwner(existing().uid) || isAdmin() || isDoctor());
+      allow list: if isSignedIn() && (isAdmin() || isDoctor() || (resource.data.uid == request.auth.uid));
+      allow create: if isVerified() && isActive() && incoming().uid == request.auth.uid && incoming().updatedAt == request.time;
+      allow update: if isVerified() && isActive() && (isOwner(existing().uid) || isAdmin() || isDoctor()) && 
+                    incoming().uid == existing().uid &&
+                    incoming().updatedAt == request.time;
+      allow delete: if isAdmin();
+    }
+
+    match /vault/{id} {
+      allow get: if isSignedIn() && (isOwner(existing().userId) || isAdmin());
+      allow list: if isSignedIn() && (isAdmin() || (resource.data.userId == request.auth.uid));
+      allow create: if isVerified() && isActive() && incoming().userId == request.auth.uid && incoming().createdAt == request.time;
+      allow delete: if (isVerified() && isActive() && isOwner(existing().userId)) || isAdmin();
+    }
+
+    match /devices/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if isOwner(uid) || isAdmin();
+    }
+
+    match /neuro_profiles/{uid} {
+      allow read: if isSignedIn() && (isOwner(uid) || isAdmin());
+      allow write: if isSignedIn() && (isOwner(uid) || isAdmin());
+    }
+
+    // ==========================================
+    // 4. INFRA & TELEMETRY
+    // ==========================================
+    match /admins/{uid} {
+      allow read: if isSignedIn();
+    }
+    match /telemetry/{id} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && incoming().timestamp == request.time;
+    }
+    match /manifestations/{id} {
+      allow get, list: if isSignedIn() && (isOwner(existing().userId) || isAdmin());
+      allow create: if isVerified() && isActive() && incoming().userId == request.auth.uid && incoming().createdAt == request.time;
+      allow update, delete: if isAdmin();
+    }
+    match /bookings/{id} {
+      allow read: if isSignedIn() && (isOwner(resource.data.userId) || isDoctor() || isAdmin());
+      allow create: if isVerified() && isActive() && incoming().userId == request.auth.uid && incoming().createdAt == request.time;
+      allow update: if isVerified() && (isAdmin() || isDoctor() || isOwner(resource.data.userId)) &&
+                    incoming().userId == existing().userId &&
+                    incoming().createdAt == existing().createdAt;
+    }
+
+    match /dropship_orders/{id} {
+      allow read: if isSignedIn() && (isOwner(resource.data.vendorId) || isOwner(resource.data.userId) || isAdmin());
+      allow create: if isVerified();
+      allow update: if isVerified() && (isOwner(resource.data.vendorId) || isAdmin());
+    }
+
+    match /therapy_requests/{id} {
+      allow read: if isSignedIn() && (isOwner(resource.data.therapistId) || isOwner(resource.data.patientUid) || isOwner(resource.data.doctorId) || isAdmin());
+      allow create: if isVerified();
+      allow update: if isVerified() && (isOwner(resource.data.therapistId) || isOwner(resource.data.doctorId) || isAdmin());
+    }
+
+    match /charities/{id} {
+      allow get, list: if true;
+      allow create: if isVerified();
+      allow update: if isAdmin();
+    }
+
+    match /donations/{id} {
+      allow list: if isAdmin();
+      allow get: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isVerified();
+    }
+  }
+}

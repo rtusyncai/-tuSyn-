@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Inter:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Cormorant Garamond", serif;
+  --font-sans: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  
+  --animate-spin-slow: spin 8s linear infinite;
+  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@layer base {
+  html {
+    @apply text-[14px] sm:text-[15px] md:text-[16px] lg:text-[17px];
+  }
+}
+
+body {
+  @apply font-sans bg-[#F5F5F0] text-[#2D3436] antialiased transition-colors duration-300;
+}
+
+.dark body {
+  @apply bg-[#1A1A15] text-[#E8E8E0];
+}
+
+h1, h2, h3, h4, h5, h6 {
+  @apply font-serif transition-colors duration-300;
+}
+
+.dark .text-[#5A5A40] {
+  @apply text-[#A8D5BA];
+}
+
+.dark .bg-white {
+  @apply bg-[#252520] border-[#3D3D35];
+}
+
+.dark .border-[#D1D1C1] {
+  @apply border-[#3D3D35];
+}
+
+.markdown-body h1 { @apply text-4xl font-bold mb-6 text-[#5A5A40] dark:text-[#A8D5BA]; }
+.markdown-body h2 { @apply text-3xl font-bold mb-4 text-[#5A5A40]; }
+.markdown-body p { @apply mb-4 leading-relaxed text-lg; }
+.markdown-body ul { @apply list-disc ml-6 mb-6; }
+.markdown-body li { @apply mb-3 text-lg; }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-[#F5F5F0];
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-[#D1D1C1] rounded-full hover:bg-[#5A5A40] transition-colors;
+}

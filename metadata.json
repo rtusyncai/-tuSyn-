@@ -1,0 +1,5 @@
+{
+  "name": "ṚtuSyn",
+  "description": "An autonomous bio-rhythmic sanctuary. ṚtuSyn evolves with your interactions, harmonizing ancient Ayurvedic wisdom with modern neural architectures and localized wellness trends.",
+  "requestFramePermissions": ["geolocation", "microphone", "camera"]
+}

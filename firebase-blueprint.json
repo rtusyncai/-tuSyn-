@@ -1,0 +1,447 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user's dosha results and basic profile information.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "doctor", "admin", "vendor"] },
+        "dosha": { "type": "string" },
+        "doshaPercentages": {
+          "type": "object",
+          "properties": {
+            "vata": { "type": "number" },
+            "pitta": { "type": "number" },
+            "kapha": { "type": "number" }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["active", "deactivated"] },
+        "deactivatedAt": { "type": "string", "format": "date-time" },
+        "isIotSyncEnabled": { "type": "boolean" },
+        "cartItems": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "price": { "type": "number" },
+              "image": { "type": "string" },
+              "quantity": { "type": "number" },
+              "description": { "type": "string" }
+            }
+          }
+        },
+        "engagement": {
+          "type": "object",
+          "properties": {
+            "nourish": { "type": "number" },
+            "sanctuary": { "type": "number" },
+            "habitat": { "type": "number" },
+            "ayurwear": { "type": "number" },
+            "prithvi": { "type": "number" }
+          }
+        }
+      },
+      "required": ["uid", "email"]
+    },
+    "MarketplaceProduct": {
+      "title": "Marketplace Product",
+      "description": "Ayurvedic products available in the marketplace.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "category": { "type": "string" },
+        "dosha": { "type": "string" },
+        "image": { "type": "string" }
+      },
+      "required": ["name", "price", "category"]
+    },
+    "Prescription": {
+      "title": "Prescription",
+      "description": "Prescriptions issued by doctors to patients.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "patientUid": { "type": "string" },
+        "doctorId": { "type": "string" },
+        "doctorName": { "type": "string" },
+        "treatmentPlan": { "type": "string" },
+        "medicines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": { "type": "string" },
+              "name": { "type": "string" },
+              "dosage": { "type": "string" }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["patientUid", "doctorId", "treatmentPlan", "createdAt"]
+    },
+    "JournalEntry": {
+      "title": "Journal Entry",
+      "description": "Private journal entries for users.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "content": { "type": "string" },
+        "summary": { "type": "string" },
+        "emotions": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "content", "createdAt"]
+    },
+    "AyurWearDesign": {
+      "title": "AyurWear Design",
+      "description": "Saved Ayurvedic ornament designs.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "dosha": { "type": "string" },
+        "intention": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "materials": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": { "type": "string" },
+              "name": { "type": "string" },
+              "property": { "type": "string" },
+              "energeticDetail": { "type": "string" },
+              "modernBenefit": { "type": "string" }
+            }
+          }
+        },
+        "symbolism": { "type": "string" },
+        "modernPerspective": { "type": "string" },
+        "imageSeed": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "dosha", "intention", "name", "createdAt"]
+    },
+    "TherapyRequest": {
+      "title": "Therapy Request",
+      "description": "Requests for therapies (e.g. Panchakarma) sent to therapists.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "patientUid": { "type": "string" },
+        "doctorId": { "type": "string" },
+        "therapistId": { "type": "string" },
+        "therapyType": { "type": "string" },
+        "notes": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "completed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["patientUid", "doctorId", "therapyType", "status", "createdAt"]
+    },
+    "DiagnosticTest": {
+      "title": "Diagnostic Test",
+      "description": "Diagnostic tests suggested or interpreted.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "patientUid": { "type": "string" },
+        "doctorId": { "type": "string" },
+        "testName": { "type": "string" },
+        "reason": { "type": "string" },
+        "results": { "type": "string" },
+        "interpretation": { "type": "string" },
+        "status": { "type": "string", "enum": ["suggested", "ordered", "completed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["patientUid", "doctorId", "testName", "status", "createdAt"]
+    },
+    "AyurChatSession": {
+      "title": "AyurChat Session",
+      "description": "Chat sessions with the AI Ayurvedic Doctor.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "role": { "type": "string", "enum": ["user", "model"] },
+              "content": { "type": "string" },
+              "timestamp": { "type": "string", "format": "date-time" }
+            }
+          }
+        },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "messages", "updatedAt"]
+    },
+    "MarketplaceService": {
+      "title": "Marketplace Service",
+      "description": "Professional services (therapists, retreats, hospitals) available in the marketplace.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "provider": { "type": "string" },
+        "description": { "type": "string" },
+        "type": { "type": "string", "enum": ["Therapist", "Retreat", "Hospital"] },
+        "category": { "type": "string" },
+        "location": { "type": "string" },
+        "rating": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "provider", "type", "category", "location"]
+    },
+    "MarketplaceProduce": {
+      "title": "Marketplace Produce",
+      "description": "Garden produce listed by users for sale.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "unit": { "type": "string" },
+        "category": { "type": "string" },
+        "organic": { "type": "boolean" },
+        "location": { "type": "string" },
+        "image": { "type": "string", "description": "Base64 encoded image or URL" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userName", "name", "price", "unit", "category", "location"]
+    },
+    "Manifestation": {
+      "title": "Manifestation",
+      "description": "AI-generated features, insights, or ornaments created during the autonomous evolution loop.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["feature", "insight", "page", "ornament", "musical_pattern"] },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["draft", "deployed", "deprecated"] },
+        "aiReasoning": { "type": "string" },
+        "config": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "type", "title", "description", "status", "aiReasoning"]
+    },
+    "Telemetry": {
+      "title": "Telemetry",
+      "description": "Interaction logs for the autonomous learning engine.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string" },
+        "metadata": { "type": "object" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "type", "timestamp"]
+    },
+    "SavedGeneration": {
+      "title": "Saved Generation",
+      "description": "User-saved artifacts from various generation features (Habitat, Prithvi, Sonic Sanctuary, etc).",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["habitat", "prithvi", "sonic_meditation", "sonic_composition", "ayurwear", "prescription"] },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "data": { "type": "object" },
+        "image": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "type", "title", "data", "createdAt"]
+    },
+    "MealPlan": {
+      "title": "Meal Plan",
+      "description": "User's weekly meal plan entries.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "day": { "type": "string", "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] },
+        "mealType": { "type": "string", "enum": ["Breakfast", "Lunch", "Dinner", "Snack"] },
+        "recipeId": { "type": "string" },
+        "recipeTitle": { "type": "string" },
+        "recipeData": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "day", "mealType", "recipeTitle", "createdAt"]
+    },
+    "MarketplaceMeal": {
+      "title": "Marketplace Meal",
+      "description": "Home-cooked Ayurvedic meals listed by users for the exchange.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "location": { "type": "string" },
+        "portions": { "type": "number" },
+        "isCompliant": { "type": "boolean" },
+        "ayurvedicProfile": {
+          "type": "object",
+          "properties": {
+            "dosha": { "type": "string" },
+            "guna": { "type": "array", "items": { "type": "string" } },
+            "rasa": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "ingredients": { "type": "array", "items": { "type": "string" } },
+        "insight": { "type": "string" },
+        "prabhava": { "type": "string" },
+        "allergens": { "type": "array", "items": { "type": "string" } },
+        "complianceNote": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userName", "name", "price", "location", "portions", "isCompliant"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Requests for therapist or retreat services.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "serviceId": { "type": "string" },
+        "serviceName": { "type": "string" },
+        "provider": { "type": "string" },
+        "price": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "completed", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "serviceId", "status", "createdAt"]
+    },
+    "DeviceSync": {
+      "title": "Device Sync",
+      "description": "External wearables and hardware bridged to the user's neural hub.",
+      "type": "object",
+      "properties": {
+        "devices": {
+          "type": "array",
+          "items": {
+             "$ref": "#/entities/ConnectedDevice"
+          }
+        }
+      }
+    },
+    "ConnectedDevice": {
+      "title": "Connected Device",
+      "description": "Details of a single bridged hardware artifact.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["glasses", "watch", "ring", "car", "neuro_link", "sensory_pad"] },
+        "brand": { "type": "string" },
+        "model": { "type": "string" },
+        "status": { "type": "string", "enum": ["connected", "disconnected", "syncing"] },
+        "lastSync": { "type": "string", "format": "date-time" },
+        "capabilities": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "NeuroProfile": {
+      "title": "Neuro Profile",
+      "description": "Traveler's cognitive accessibility and neural synchrony configurations.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "isNeuroSyncEnabled": { "type": "boolean" },
+        "preference": { "type": "string", "enum": ["standard", "simplified", "high-contrast", "sensory-friendly"] },
+        "cognitiveLoadThreshold": { "type": "integer" },
+        "recentNeuralHarmony": { "type": "array", "items": { "type": "integer" } }
+      }
+    }
+  },
+  "firestore": {
+    "/profiles/{uid}": {
+      "schema": "UserProfile",
+      "description": "User profile documents."
+    },
+    "/neuro_profiles/{uid}": {
+      "schema": "NeuroProfile",
+      "description": "Traveler's cognitive accessibility and neural synchronization settings."
+    },
+    "/devices/{uid}": {
+      "schema": "DeviceSync",
+      "description": "User's bridged hardware artifacts."
+    },
+    "/profiles/{uid}/meal_plan/{planId}": {
+      "schema": "MealPlan",
+      "description": "User's weekly meal plan."
+    },
+    "/profiles/{uid}/journal/{entryId}": {
+      "schema": "JournalEntry",
+      "description": "User's private journal entries."
+    },
+    "/profiles/{uid}/ayurwear/{designId}": {
+      "schema": "AyurWearDesign",
+      "description": "User's saved ornament designs."
+    },
+    "/marketplace/{productId}": {
+      "schema": "MarketplaceProduct",
+      "description": "Marketplace products."
+    },
+    "/prescriptions/{prescriptionId}": {
+      "schema": "Prescription",
+      "description": "Prescriptions issued to patients."
+    },
+    "/therapy_requests/{requestId}": {
+      "schema": "TherapyRequest",
+      "description": "Requests for therapies."
+    },
+    "/diagnostic_tests/{testId}": {
+      "schema": "DiagnosticTest",
+      "description": "Diagnostic tests and results."
+    },
+    "/ayur_chats/{sessionId}": {
+      "schema": "AyurChatSession",
+      "description": "AI Ayurvedic Doctor chat sessions."
+    },
+    "/marketplace_services/{serviceId}": {
+      "schema": "MarketplaceService",
+      "description": "Professional services listed by providers."
+    },
+    "/marketplace_produce/{produceId}": {
+      "schema": "MarketplaceProduce",
+      "description": "Garden produce listed by users."
+    },
+    "/marketplace_meals/{mealId}": {
+      "schema": "MarketplaceMeal",
+      "description": "Home-cooked Ayurvedic meals listed for exchange."
+    },
+    "/bookings/{bookingId}": {
+      "schema": "Booking",
+      "description": "Service book requests."
+    },
+    "/manifestations/{id}": {
+      "schema": "Manifestation",
+      "description": "Autonomous application snapshots and insights."
+    },
+    "/telemetry/{id}": {
+      "schema": "Telemetry",
+      "description": "User interaction logs for neural growth."
+    },
+    "/vault/{id}": {
+      "schema": "SavedGeneration",
+      "description": "User's personal sacred vault of saved wellness designs and compositions."
+    }
+  }
+}
