@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react';
 import * as THREE from 'three';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { XR, createXRStore } from '@react-three/xr';
 import { OrbitControls, Stars, Float, MeshDistortMaterial, Sphere, Text } from '@react-three/drei';
 import { useVision } from '../hooks/useVision';
@@ -220,53 +220,174 @@ const GlassesHUD = () => {
     );
 };
 
-const SacredGeometry = ({ payload }: { payload: any }) => {
+const SacredImagePlane = ({ image, biometrics }: { image: string; biometrics: any }) => {
+  const meshRef = React.useRef<THREE.Mesh>(null);
+  
+  useFrame((state) => {
+    const time = state.clock.getElapsedTime();
+    const hrFactor = (biometrics?.heartRate || 72) / 60;
+    const pulse = 1 + Math.sin(time * hrFactor * Math.PI) * 0.04;
+    if (meshRef.current) {
+      meshRef.current.scale.set(pulse, pulse, 1);
+      meshRef.current.position.y = Math.sin(time * 0.5) * 0.1;
+    }
+  });
+
   return (
-    <Float speed={2} rotationIntensity={1} floatIntensity={2}>
+    <mesh ref={meshRef}>
+      <planeGeometry args={[3, 2]} />
+      <meshBasicMaterial 
+        map={new THREE.TextureLoader().load(image)} 
+        transparent 
+        opacity={0.8}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  );
+};
+
+const SacredTorusKnot = ({ biometrics, baseColor }: { biometrics: any; baseColor?: string }) => {
+  const meshRef = React.useRef<THREE.Mesh>(null);
+
+  useFrame((state) => {
+    const time = state.clock.getElapsedTime();
+    const hrSpeed = (biometrics?.heartRate || 72) / 72;
+
+    if (meshRef.current) {
+      meshRef.current.rotation.x += 0.003 * hrSpeed;
+      meshRef.current.rotation.y += 0.006 * hrSpeed;
+
+      const freq = hrSpeed * Math.PI * 2;
+      const stressAmp = 0.04 + (biometrics?.stressLevel || 0.45) * 0.08;
+      const pulse = 1.0 + Math.sin(time * freq) * stressAmp;
+      
+      meshRef.current.scale.set(pulse, pulse, pulse);
+    }
+  });
+
+  const stressEmissive = React.useMemo(() => {
+    const calmColor = new THREE.Color("#5A5A40");
+    const tenseColor = new THREE.Color("#ef4444");
+    const level = biometrics?.stressLevel !== undefined ? biometrics.stressLevel : 0.45;
+    return calmColor.clone().lerp(tenseColor, level);
+  }, [biometrics?.stressLevel]);
+
+  return (
+    <mesh ref={meshRef} rotation={[Math.PI / 4, 0, 0]}>
+      <torusKnotGeometry args={[1, 0.3, 128, 16]} />
+      <MeshDistortMaterial
+        color={baseColor || "#A8D5BA"}
+        speed={1 + (biometrics?.heartRate || 72) / 40}
+        distort={0.15 + (biometrics?.stressLevel || 0.45) * 0.5}
+        radius={1}
+        emissive={stressEmissive}
+        emissiveIntensity={0.3 + (biometrics?.stressLevel || 0.45) * 1.5}
+        wireframe
+      />
+    </mesh>
+  );
+};
+
+const BioPulsar = ({ biometrics, baseColor }: { biometrics: any; baseColor?: string }) => {
+  const meshRef = React.useRef<THREE.Mesh>(null);
+
+  useFrame((state) => {
+    const time = state.clock.getElapsedTime();
+    const hrSpeed = (biometrics?.heartRate || 72) / 60;
+    const freq = hrSpeed * Math.PI * 2;
+    const pulse = 0.6 * (1 + Math.sin(time * freq) * 0.15);
+
+    if (meshRef.current) {
+       meshRef.current.scale.set(pulse, pulse, pulse);
+    }
+  });
+
+  const dynamicColor = React.useMemo(() => {
+    const calm = new THREE.Color(baseColor || "#34d399");
+    const tense = new THREE.Color("#b91c1c");
+    const level = biometrics?.stressLevel !== undefined ? biometrics.stressLevel : 0.45;
+    return calm.clone().lerp(tense, level);
+  }, [baseColor, biometrics?.stressLevel]);
+
+  return (
+    <Sphere ref={meshRef} args={[1, 32, 32]} position={[0, -1.5, 0]}>
+      <MeshDistortMaterial
+        color={dynamicColor}
+        speed={3 + (biometrics?.heartRate || 72) / 24}
+        distort={0.1 + (biometrics?.stressLevel || 0.45) * 0.5}
+        metalness={0.8}
+        roughness={0.2}
+      />
+    </Sphere>
+  );
+};
+
+const SacredGeometry = ({ payload, biometrics }: { payload: any; biometrics: any }) => {
+  const stress = biometrics?.stressLevel || 0.45;
+  return (
+    <Float speed={1.5 + stress * 2.5} rotationIntensity={0.5 + stress} floatIntensity={1.5 + stress}>
       {payload?.image ? (
-          <mesh>
-              <planeGeometry args={[3, 2]} />
-              <meshBasicMaterial 
-                map={new THREE.TextureLoader().load(payload.image)} 
-                transparent 
-                opacity={0.8}
-                side={THREE.DoubleSide}
-              />
-          </mesh>
+          <SacredImagePlane image={payload.image} biometrics={biometrics} />
       ) : (
-          <mesh rotation={[Math.PI / 4, 0, 0]}>
-            <torusKnotGeometry args={[1, 0.3, 128, 16]} />
-            <MeshDistortMaterial
-              color={payload?.data?.plan?.colors?.[0] || "#A8D5BA"}
-              speed={2}
-              distort={0.4}
-              radius={1}
-              emissive="#5A5A40"
-              emissiveIntensity={0.5}
-              wireframe
-            />
-          </mesh>
+          <SacredTorusKnot biometrics={biometrics} baseColor={payload?.data?.plan?.colors?.[0]} />
       )}
       
-      {/* Bio-Rhythmic Pulsar */}
-      <Sphere args={[0.5, 32, 32]} position={[0, -1.5, 0]}>
-        <MeshDistortMaterial
-          color={payload?.data?.plan?.colors?.[1] || "#FF6B6B"}
-          speed={5}
-          distort={0.3}
-          metalness={0.8}
-          roughness={0.2}
-        />
-      </Sphere>
+      <BioPulsar biometrics={biometrics} baseColor={payload?.data?.plan?.colors?.[1]} />
 
-      {/* Habitat Color Orbs */}
       {payload?.data?.plan?.colors?.map((color: string, i: number) => (
-          <Float key={i} position={[(i - 1) * 2, 1, -1]} speed={3}>
+          <Float key={i} position={[(i - 1) * 2, 1, -1]} speed={2 + stress * 3}>
               <Sphere args={[0.2, 16, 16]}>
-                  <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.5} />
+                  <meshStandardMaterial 
+                    color={color} 
+                    emissive={color} 
+                    emissiveIntensity={0.3 + stress * 1.2} 
+                  />
               </Sphere>
           </Float>
       ))}
+    </Float>
+  );
+};
+
+const NeuroSphere = ({ biometrics }: { biometrics: any }) => {
+  const meshRef = React.useRef<THREE.Mesh>(null);
+  const stress = biometrics?.stressLevel || 0.45;
+  const hr = biometrics?.heartRate || 72;
+
+  useFrame((state) => {
+    const time = state.clock.getElapsedTime();
+    const breathingFreq = (hr / 120) * Math.PI; 
+    const basePulse = 1.6 + Math.sin(time * breathingFreq) * 0.35;
+    
+    if (meshRef.current) {
+      meshRef.current.scale.set(basePulse, basePulse, basePulse);
+    }
+  });
+
+  const color = React.useMemo(() => {
+    const calmColor = new THREE.Color("#10b981");
+    const neutralColor = new THREE.Color("#6366f1");
+    const tenseColor = new THREE.Color("#ec4899");
+    
+    if (stress > 0.6) {
+      return neutralColor.clone().lerp(tenseColor, (stress - 0.6) / 0.4);
+    } else {
+      return calmColor.clone().lerp(neutralColor, stress / 0.6);
+    }
+  }, [stress]);
+
+  return (
+    <Float speed={0.8 + stress * 1.5} rotationIntensity={0.3} floatIntensity={0.8}>
+       <Sphere ref={meshRef} args={[1, 64, 64]}>
+          <MeshDistortMaterial
+            color={color}
+            speed={0.2 + hr / 150}
+            distort={0.15 + stress * 0.35}
+            radius={1}
+            opacity={0.38 - stress * 0.15}
+            transparent
+          />
+       </Sphere>
     </Float>
   );
 };
@@ -297,6 +418,7 @@ const EthericUI = ({ title }: { title?: string }) => (
 export const VisionPortal: React.FC = () => {
   const { user } = useAuth();
   const { mode, setMode, payload } = useVision();
+  const { data: bio } = useBiometrics();
   const [neuroProfile, setNeuroProfile] = React.useState<NeuroProfile | null>(null);
   const [harmony, setHarmony] = React.useState(75);
 
@@ -387,23 +509,12 @@ export const VisionPortal: React.FC = () => {
             <Suspense fallback={null}>
               {mode !== 'glasses' && mode !== 'neuro' && (
                 <>
-                  <SacredGeometry payload={payload} />
+                  <SacredGeometry payload={payload} biometrics={bio} />
                   <EthericUI title={payload?.title} />
                 </>
               )}
               {mode === 'neuro' && (
-                 <Float speed={1} rotationIntensity={0.5} floatIntensity={1}>
-                    <Sphere args={[2, 64, 64]}>
-                       <MeshDistortMaterial
-                         color="#6366f1"
-                         speed={0.5}
-                         distort={0.2}
-                         radius={1}
-                         opacity={0.3}
-                         transparent
-                       />
-                    </Sphere>
-                 </Float>
+                 <NeuroSphere biometrics={bio} />
               )}
               {mode === 'vr' && (
                   <>

@@ -13,6 +13,32 @@ import Markdown from 'react-markdown';
 import { SmartFulfillmentCard } from '../components/SmartFulfillmentCard';
 import { CameraModal } from '../components/CameraModal';
 
+const extractMarkdownText = (children: any): string => {
+  if (!children) return '';
+  if (typeof children === 'string') return children;
+  if (Array.isArray(children)) {
+    return children.map(extractMarkdownText).join('');
+  }
+  // Safe accessor if children is a React element
+  if (children && typeof children === 'object' && 'props' in children && children.props && children.props.children) {
+    return extractMarkdownText(children.props.children);
+  }
+  return '';
+};
+
+const findGroundingMapLink = (text: string, groundingChunks: any[]) => {
+  if (!groundingChunks) return null;
+  const cleanedText = text.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+  if (cleanedText.length < 3) return null;
+  
+  const matched = groundingChunks.find((chunk: any) => {
+    if (!chunk.maps || !chunk.maps.title) return false;
+    const title = chunk.maps.title.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+    return title.includes(cleanedText) || cleanedText.includes(title);
+  });
+  return matched?.maps?.uri || null;
+};
+
 export const NourishPage = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -153,17 +179,18 @@ export const NourishPage = () => {
           }
         } catch (error) {
           console.error(error);
+          toast("Failed to reverse geocode coordinate.", "error");
         } finally {
           setDetectingLocation(false);
         }
       }, (error) => {
         console.error(error);
         setDetectingLocation(false);
-        alert("Could not detect location. Please enter it manually.");
+        toast("Could not detect location automatically. Please enter it manually.", "error");
       });
     } else {
       setDetectingLocation(false);
-      alert("Geolocation is not supported by your browser.");
+      toast("Geolocation is not supported by your browser.", "error");
     }
   };
 
@@ -682,6 +709,24 @@ export const NourishPage = () => {
                       <p className="text-[10px] text-indigo-900/60 italic leading-snug">{recipe.seasonalSignificance}</p>
                     </div>
 
+                    {recipe.ecologicalBenefits && (
+                      <div className="p-3 bg-emerald-50/50 rounded-2xl border border-emerald-105">
+                        <h5 className="text-[10px] font-bold uppercase tracking-widest text-emerald-700 mb-1 flex items-center gap-1">
+                          <Compass size={10} /> Ecological Benefit
+                        </h5>
+                        <p className="text-[10px] text-emerald-950/80 italic leading-snug">{recipe.ecologicalBenefits}</p>
+                      </div>
+                    )}
+
+                    {recipe.healthBenefits && (
+                      <div className="p-3 bg-rose-50/50 rounded-2xl border border-rose-105">
+                        <h5 className="text-[10px] font-bold uppercase tracking-widest text-rose-700 mb-1 flex items-center gap-1">
+                          <Activity size={10} /> Health & Dosha Benefit
+                        </h5>
+                        <p className="text-[10px] text-rose-950/80 italic leading-snug">{recipe.healthBenefits}</p>
+                      </div>
+                    )}
+
                     <div className="p-3 bg-amber-50 rounded-2xl">
                       <h5 className="text-[10px] font-bold uppercase tracking-widest text-amber-700 mb-1 flex items-center gap-1">
                         <Sparkles size={10} /> Integrated Wisdom
@@ -801,7 +846,107 @@ export const NourishPage = () => {
                   prose-strong:text-[#5A5A40] dark:prose-strong:text-[#A8D5BA]
                   prose-li:text-[#2D3436]/70 dark:prose-li:text-[#E8E8E0]/70
                   prose-hr:border-[#D1D1C1]/20 dark:prose-hr:border-[#3D3D35]">
-                  <Markdown>{restaurantData.text}</Markdown>
+                  <Markdown
+                    components={{
+                      h1: ({ children }) => {
+                        const text = extractMarkdownText(children);
+                        const url = findGroundingMapLink(text, restaurantData.groundingChunks);
+                        return (
+                          <h1 className="flex flex-wrap items-center gap-2">
+                            {children}
+                            {url && (
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[10px] bg-[#5A5A40]/10 hover:bg-[#5A5A40]/20 text-[#5A5A40] dark:bg-[#A8D5BA]/10 dark:hover:bg-[#A8D5BA]/20 dark:text-[#A8D5BA] px-2.5 py-1 rounded-full transition-all font-bold tracking-widest uppercase ml-2 no-underline border border-[#5A5A40]/20"
+                              >
+                                <MapPin size={10} /> View on Map
+                              </a>
+                            )}
+                          </h1>
+                        );
+                      },
+                      h2: ({ children }) => {
+                        const text = extractMarkdownText(children);
+                        const url = findGroundingMapLink(text, restaurantData.groundingChunks);
+                        return (
+                          <h2 className="flex flex-wrap items-center gap-2">
+                            {children}
+                            {url && (
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[10px] bg-[#5A5A40]/10 hover:bg-[#5A5A40]/20 text-[#5A5A40] dark:bg-[#A8D5BA]/10 dark:hover:bg-[#A8D5BA]/20 dark:text-[#A8D5BA] px-2.5 py-1 rounded-full transition-all font-bold tracking-widest uppercase ml-2 no-underline border border-[#5A5A40]/20"
+                              >
+                                <MapPin size={10} /> View on Map
+                              </a>
+                            )}
+                          </h2>
+                        );
+                      },
+                      h3: ({ children }) => {
+                        const text = extractMarkdownText(children);
+                        const url = findGroundingMapLink(text, restaurantData.groundingChunks);
+                        return (
+                          <h3 className="flex flex-wrap items-center gap-2">
+                            {children}
+                            {url && (
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-[10px] bg-[#5A5A40]/10 hover:bg-[#5A5A40]/20 text-[#5A5A40] dark:bg-[#A8D5BA]/10 dark:hover:bg-[#A8D5BA]/20 dark:text-[#A8D5BA] px-2.5 py-1 rounded-full transition-all font-bold tracking-widest uppercase ml-2 no-underline border border-[#5A5A40]/20"
+                              >
+                                <MapPin size={10} /> View on Map
+                              </a>
+                            )}
+                          </h3>
+                        );
+                      },
+                      h4: ({ children }) => {
+                        const text = extractMarkdownText(children);
+                        const url = findGroundingMapLink(text, restaurantData.groundingChunks);
+                        return (
+                          <h4 className="flex flex-wrap items-center gap-2">
+                            {children}
+                            {url && (
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-[10px] bg-[#5A5A40]/10 hover:bg-[#5A5A40]/20 text-[#5A5A40] dark:bg-[#A8D5BA]/10 dark:hover:bg-[#A8D5BA]/20 dark:text-[#A8D5BA] px-2.5 py-1 rounded-full transition-all font-bold tracking-widest uppercase ml-2 no-underline border border-[#5A5A40]/20"
+                              >
+                                <MapPin size={10} /> View on Map
+                              </a>
+                            )}
+                          </h4>
+                        );
+                      },
+                      strong: ({ children }) => {
+                        const text = extractMarkdownText(children);
+                        const url = findGroundingMapLink(text, restaurantData.groundingChunks);
+                        return (
+                          <strong className="inline-flex flex-wrap items-center gap-1 text-[#5A5A40] dark:text-[#A8D5BA]">
+                            {children}
+                            {url && (
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[9px] bg-[#5A5A40]/10 hover:bg-[#5A5A40]/20 text-[#5A5A40] dark:bg-[#A8D5BA]/10 dark:hover:bg-[#A8D5BA]/20 dark:text-[#A8D5BA] px-2 py-0.5 rounded-full transition-all font-bold tracking-widest uppercase ml-2 no-underline font-sans border border-[#5A5A40]/20"
+                              >
+                                <MapPin size={9} /> View on Map
+                              </a>
+                            )}
+                          </strong>
+                        );
+                      }
+                    }}
+                  >
+                    {restaurantData.text}
+                  </Markdown>
                 </div>
                 
                 {restaurantData.groundingChunks.length > 0 && (

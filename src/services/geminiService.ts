@@ -226,11 +226,12 @@ export const geminiService = {
       1. Seasonal & Local: Prioritize ingredients that are native or in-season for ${location}.
       2. Integrated Wisdom: Blend Ayurvedic culinary rules for ${dosha} with modern science on seasonal nutrient density.
       3. Practicality: Ensure ingredients are realistically obtainable in a local market or home garden.
+      4. Ecological and Health Benefits: Provide explicit explanations of the ecological benefits (supporting local farmers, lower food miles, eco-system preservation) and the biochemical health benefits (Dosha balance, seasonal nutrient density) of enjoying these ingredients.
       
       PATIENT CONTEXT:
       ${JSON.stringify(patientData || {})}
       
-      Provide detailed nutritional info and explain the "Nearby Harvest" significance.`,
+      Provide detailed nutritional info and explain the "Nearby Harvest" significance, including ecological and health benefits.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -244,6 +245,8 @@ export const geminiService = {
               instructions: { type: Type.ARRAY, items: { type: Type.STRING } },
               integratedBenefit: { type: Type.STRING },
               seasonalSignificance: { type: Type.STRING },
+              ecologicalBenefits: { type: Type.STRING, description: "Brief explanation of ecological benefits such as reduced carbon footprint and local sourcing." },
+              healthBenefits: { type: Type.STRING, description: "Brief explanation of health benefits balancing the target dosha and providing season-specific nutrients." },
               nutritionalInfo: {
                 type: Type.OBJECT,
                 properties: {
@@ -270,7 +273,7 @@ export const geminiService = {
                 required: ["type", "title", "description", "items", "rationale"]
               }
             },
-            required: ["title", "description", "nearbyIngredients", "instructions", "integratedBenefit", "seasonalSignificance", "nutritionalInfo", "fulfillmentActions"]
+            required: ["title", "description", "nearbyIngredients", "instructions", "integratedBenefit", "seasonalSignificance", "ecologicalBenefits", "healthBenefits", "nutritionalInfo", "fulfillmentActions"]
           }
         }
       }

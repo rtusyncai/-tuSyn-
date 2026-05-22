@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { ArrowRight, Sparkles, Wind, Utensils, MapPin, BookOpen, ClipboardList, MessageSquare, Sun, Moon, Coffee, Heart, Activity, Brain, Archive, Calendar, Flower, ShoppingBag, Waves, Loader2, Zap } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { useAuth } from '../hooks/useAuth';
 import { db } from '../lib/firebase';
@@ -24,6 +24,7 @@ const features = [
 
 export const HomePage = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [locationPoem, setLocationPoem] = useState<string>('');
   const [recommendations, setRecommendations] = useState<any[]>([]);
@@ -95,12 +96,12 @@ export const HomePage = () => {
               Discover your unique constitution and embark on a personalized journey of sensory alignment.
             </p>
             <div className="pt-6">
-              <Link 
-                to="/quiz" 
-                className="inline-flex items-center gap-4 bg-white text-[#5A5A40] px-10 py-5 rounded-[24px] text-base font-black uppercase tracking-widest hover:bg-amber-50 hover:scale-105 active:scale-95 transition-all shadow-2xl group/btn"
+              <button 
+                onClick={() => navigate('/quiz')}
+                className="inline-flex items-center gap-4 bg-white text-[#1A1A15] px-10 py-5 rounded-[24px] text-base font-black uppercase tracking-widest hover:bg-[#3D3D2B] hover:text-white hover:scale-[1.03] active:scale-95 transition-all duration-200 ease-in-out shadow-2xl group/btn border border-white/20"
               >
-                Reveal Dosha <ArrowRight className="group-hover/btn:translate-x-2 transition-transform" />
-              </Link>
+                Reveal Dosha <ArrowRight className="group-hover/btn:translate-x-2 transition-transform duration-200 ease-in-out" />
+              </button>
             </div>
           </motion.div>
         </div>
